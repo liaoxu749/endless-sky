@@ -16,6 +16,8 @@ namespace ESMP {
 	// LAN discovery and game traffic share this UDP port; TCP uses it too.
 	constexpr uint16_t PORT = 4777;
 	constexpr uint32_t PROTOCOL_VERSION = 1;
+	// Beacon magic bytes; also guards against stray UDP traffic.
+	constexpr const char *MAGIC = "ESMP";
 	// Snapshot cadence and per-snapshot entity cap.
 	constexpr int SNAPSHOT_HZ = 30;
 	constexpr int MAX_SNAPSHOT_ENTITIES = 32;
@@ -64,8 +66,10 @@ namespace ESMP {
 	};
 
 	// Client input state, sent at SNAPSHOT_HZ. The two bitsets are the raw
-	// Command / FireCommand sets (Command.h, FireCommand.h).
+	// Command / FireCommand sets (Command.h, FireCommand.h). The slot field
+	// lets the host attribute UDP datagrams without a handshake.
 	struct InputPacket {
+		uint8_t slot;
 		uint32_t commands;
 		uint32_t fire;
 		float mouse[2]; // aim point, engine coordinates

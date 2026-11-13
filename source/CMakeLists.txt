@@ -389,6 +389,10 @@ target_sources(EndlessSkyLib PRIVATE
 	WormholeStrategy.h
 	ZipFile.cpp
 	ZipFile.h
+	network/NetClient.cpp
+	network/NetClient.h
+	network/NetServer.cpp
+	network/NetServer.h
 	network/NetSocket.cpp
 	network/NetSocket.h
 	network/Protocol.h
