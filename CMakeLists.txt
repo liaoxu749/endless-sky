@@ -90,6 +90,13 @@ if(NOT APPLE AND NOT ES_GLES)
 endif()
 
 # Only very new versions of OpenAL provide a config package, so try to find it manually.
+if(ANDROID)
+	# vcpkg's OpenAL for Android links OpenSL ES but does not define the
+	# imported target itself; provide it so the exported config loads.
+	add_library(OpenSL::OpenSLES UNKNOWN IMPORTED)
+	find_library(OPENSLES_LIBRARY OpenSLES REQUIRED)
+	set_target_properties(OpenSL::OpenSLES PROPERTIES IMPORTED_LOCATION "${OPENSLES_LIBRARY}")
+endif()
 find_package(OpenAL CONFIG QUIET)
 if(NOT OpenAL_FOUND)
 	find_library(OPENAL openal REQUIRED)
@@ -255,9 +262,10 @@ endif()
 
 # Setup for the testing frameworks.
 include(CTest)
-if(BUILD_TESTING AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests")
+if(BUILD_TESTING AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests" AND NOT ANDROID)
 	# ESMP fork note: the tests directory is optional so that sparse
-	# checkouts (source/ only) can still build the full library.
+	# checkouts (source/ only) can still build the full library, and is
+	# skipped on Android (no EndlessSky executable target there).
 	add_subdirectory(tests)
 endif()
 
@@ -422,7 +430,9 @@ elseif(UNIX AND NOT ANDROID)
 endif()
 
 # Create symlink to compile_commands.json from build/ so it's LSP-discoverable.
-execute_process(
-	COMMAND ${CMAKE_COMMAND} -E create_symlink
-	${CMAKE_BINARY_DIR}/compile_commands.json
-	${CMAKE_CURRENT_SOURCE_DIR}/build/compile_commands.json)
+if(NOT ANDROID)
+	execute_process(
+		COMMAND ${CMAKE_COMMAND} -E create_symlink
+		${CMAKE_BINARY_DIR}/compile_commands.json
+		${CMAKE_CURRENT_SOURCE_DIR}/build/compile_commands.json)
+endif()
