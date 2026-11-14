@@ -30,6 +30,48 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 
 using namespace std;
 
+#ifdef __ANDROID__
+#include "SDL_system.h"
+
+namespace {
+	// ESMP: force the Android soft keyboard to show, bypassing SDL's
+	// text-input state machine entirely (the InputMethodManager is toggled
+	// with SHOW_FORCED, which works regardless of view focus).
+	void ForceShowKeyboard()
+	{
+		JNIEnv *env = static_cast<JNIEnv *>(SDL_AndroidGetJNIEnv());
+		if(!env)
+			return;
+		jobject activity = static_cast<jobject>(SDL_AndroidGetActivity());
+		if(!activity)
+			return;
+		jclass activityClass = env->GetObjectClass(activity);
+		jmethodID getSystemService = env->GetMethodID(activityClass,
+			"getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;");
+		jobject manager = nullptr;
+		if(getSystemService)
+		{
+			jstring serviceName = env->NewStringUTF("input_method");
+			manager = env->CallObjectMethod(activity, getSystemService, serviceName);
+			env->DeleteLocalRef(serviceName);
+		}
+		if(manager)
+		{
+			jclass managerClass = env->GetObjectClass(manager);
+			jmethodID toggle = env->GetMethodID(managerClass, "toggleSoftInput", "(II)V");
+			if(toggle)
+				env->CallVoidMethod(manager, toggle, 2 /* SHOW_FORCED */, 0);
+			env->DeleteLocalRef(managerClass);
+			env->DeleteLocalRef(manager);
+		}
+		if(env->ExceptionCheck())
+			env->ExceptionClear();
+		env->DeleteLocalRef(activityClass);
+		env->DeleteLocalRef(activity);
+	}
+}
+#endif
+
 namespace {
 	constexpr size_t INVALID_POS = -1;
 }
@@ -98,6 +140,18 @@ void Edit::Draw()
 {
 	if(!visible)
 		return;
+
+#ifdef __ANDROID__
+	// ESMP: manual soft-keyboard button, shown while the field is focused.
+	if(HasFocus())
+	{
+		const Rectangle &button = KbButtonRect();
+		FillShader::Fill(button, *GameData::Colors().Get("dark"));
+		const Font &font = FontSet::Get(fontSize);
+		font.Draw("KB", button.Center() - Point(font.Width("KB") / 2., 8.),
+			*GameData::Colors().Get("medium"));
+	}
+#endif
 
 	// const Font &font = FontSet::Get(14);
 	// const Color &bright = *GameData::Colors().Get("bright");
@@ -319,6 +373,13 @@ bool Edit::Click(int x, int y, MouseButton button, int clicks)
 {
 	if(button != MouseButton::LEFT)
 		return false;
+#ifdef __ANDROID__
+	if(HasFocus() && KbButtonRect().Contains(Point(x, y)))
+	{
+		ForceShowKeyboard();
+		return true;
+	}
+#endif
 	if(!position.Contains(Point(x, y)))
 	{
 		SetFocus(false);
@@ -414,6 +475,17 @@ bool Edit::OnFocus(bool f)
 #endif
 	return true;
 }
+
+
+
+#ifdef __ANDROID__
+Rectangle Edit::KbButtonRect() const
+{
+	// A small strip centered under the text field.
+	return Rectangle(Point(position.Left() + position.Width() / 2.,
+		position.Bottom() + 26.), Point(120., 44.));
+}
+#endif
 
 
 

@@ -78,6 +78,11 @@ protected:
 	virtual bool OnFocus(bool f) override;
 	virtual bool TextInput(const std::string &s) override;
 
+#ifdef __ANDROID__
+	// ESMP: on-screen button that force-shows the soft keyboard.
+	Rectangle KbButtonRect() const;
+#endif
+
 	void MoveCaret(size_t pos);
 	void UpdateCaret(size_t pos);
 	void UpdateText(const std::string &text, size_t caretPos);
