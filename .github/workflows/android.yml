@@ -45,8 +45,9 @@ jobs:
             -exec cp {} android/app/src/main/jniLibs/arm64-v8a/ \; 2>/dev/null || true
           zip -qr android/app/src/main/assets/resources.zip \
             data images shaders sounds credits.txt keys.txt changelog copyright
-          gradle -p android wrapper --gradle-version 8.7 --no-daemon
-          ./gradlew -p android assembleDebug --no-daemon
+          cd android
+          gradle wrapper --gradle-version 8.7 --no-daemon
+          ./gradlew assembleDebug --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
