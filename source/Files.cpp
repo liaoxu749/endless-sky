@@ -19,6 +19,9 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 #include "ZipFile.h"
 
 #include "SDL.h"
+#ifdef __ANDROID__
+#include "SDL_system.h"
+#endif
 
 #include <algorithm>
 #include <fstream>
@@ -91,6 +94,29 @@ namespace {
 
 		return {};
 	}
+
+#ifdef __ANDROID__
+	// Copy a single file out of the APK assets. SDL2 resolves
+	// SDL_RWFromFile against the APK's assets directory, so no JNI needed.
+	void ExtractFromAssets(const char *assetName, const filesystem::path &dest)
+	{
+		SDL_RWops *rw = SDL_RWFromFile(assetName, "rb");
+		if(!rw)
+			throw runtime_error("Unable to open \"" + string(assetName)
+				+ "\" in the APK: " + SDL_GetError());
+		ofstream out(dest, ios::out | ios::binary);
+		if(!out)
+		{
+			SDL_RWclose(rw);
+			throw runtime_error("Unable to write \"" + dest.string() + "\".");
+		}
+		char chunk[65536];
+		size_t read = 0;
+		while((read = SDL_RWread(rw, chunk, 1, sizeof(chunk))) > 0)
+			out.write(chunk, read);
+		SDL_RWclose(rw);
+	}
+#endif
 }
 
 
@@ -111,6 +137,22 @@ void Files::Init(const char *const *argv)
 
 	if(resources.empty())
 	{
+#ifdef __ANDROID__
+		// Android: the resources live in a zip file that is extracted from
+		// the APK on first launch. APK assets cannot be listed as
+		// directories, but Endless Sky can read all of its resources from
+		// a zip file natively.
+		char *storagePath = SDL_AndroidGetInternalStoragePath();
+		if(!storagePath)
+			throw runtime_error("Unable to get the Android storage path!");
+		filesystem::path resourcesZip = filesystem::path{storagePath} / "resources.zip";
+		if(!exists(resourcesZip))
+		{
+			Logger::Log("Extracting game resources from the APK (first launch, this may take a minute)...");
+			ExtractFromAssets("resources.zip", resourcesZip);
+		}
+		resources = resourcesZip;
+#else
 		// Find the path to the resource directory. This will depend on the
 		// operating system, and can be overridden by a command line argument.
 #ifdef ES_USE_SDL3
@@ -143,6 +185,7 @@ void Files::Init(const char *const *argv)
 		else if(IsParent(STANDARD_PATH, resources))
 			resources = STANDARD_PATH / RESOURCE_PATH;
 #endif
+#endif // __ANDROID__
 	}
 	// If the resources are not here, search in the directories containing this
 	// one. This allows, for example, a Mac app that does not actually have the

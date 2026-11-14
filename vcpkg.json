@@ -17,7 +17,7 @@
 			"dependencies": [
 				{
 					"name": "glew",
-					"platform": "!osx"
+					"platform": "!osx & !android"
 				},
 				"libavif",
 				"libpng",

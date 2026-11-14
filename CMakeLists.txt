@@ -305,6 +305,12 @@ elseif(WIN32)
 	if(ES_LARGE_ADDRESS_AWARE)
 		target_link_options(EndlessSky PRIVATE "-Wl,--large-address-aware")
 	endif()
+elseif(ANDROID)
+	# Android: SDLActivity loads a shared library named "main" and calls
+	# SDL_main, which main.cpp provides via its SDL.h include.
+	add_library(main SHARED source/main.cpp)
+	target_link_libraries(main PRIVATE log)
+	set_target_properties(main PROPERTIES OUTPUT_NAME "main")
 else()
 	add_executable(EndlessSky source/main.cpp)
 	set_target_properties(EndlessSky PROPERTIES OUTPUT_NAME "endless-sky")

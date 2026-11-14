@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+	<!-- LAN multiplayer sockets and UDP discovery broadcasts. -->
+	<uses-permission android:name="android.permission.INTERNET" />
+	<!-- Keep the screen readable while flying; ESMP session continues. -->
+	<uses-permission android:name="android.permission.WAKE_LOCK" />
+
+	<application
+		android:label="Endless Sky"
+		android:hardwareAccelerated="true"
+		android:theme="@style/AppTheme"
+		android:allowBackup="true">
+
+		<activity
+			android:name=".MainActivity"
+			android:label="Endless Sky"
+			android:configChanges="keyboard|keyboardHidden|orientation|screenSize|uiMode|density|screenLayout"
+			android:screenOrientation="sensorLandscape"
+			android:exported="true">
+			<intent-filter>
+				<action android:name="android.intent.action.MAIN" />
+				<category android:name="android.intent.category.LAUNCHER" />
+			</intent-filter>
+		</activity>
+	</application>
+</manifest>

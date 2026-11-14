@@ -1,0 +1,36 @@
+plugins {
+	id 'com.android.application'
+}
+
+android {
+	namespace 'org.endlesssky.esmp'
+	compileSdk 34
+
+	defaultConfig {
+		applicationId "org.endlesssky.esmp"
+		minSdk 24
+		targetSdk 34
+		versionCode 1
+		versionName "0.1-esmp"
+		ndk {
+			abiFilters 'arm64-v8a'
+		}
+	}
+
+	// The native library (libmain.so) is built by CMake in CI and dropped
+	// into src/main/jniLibs; Gradle only packages it.
+	sourceSets {
+		main {
+			jniLibs.srcDirs = ['src/main/jniLibs']
+		}
+	}
+
+	buildTypes {
+		release {
+			minifyEnabled false
+		}
+	}
+	packagingOptions {
+		jniLibs.useLegacyPackaging = false
+	}
+}
