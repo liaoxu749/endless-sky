@@ -142,13 +142,14 @@ void Files::Init(const char *const *argv)
 		// the APK on first launch. APK assets cannot be listed as
 		// directories, but Endless Sky can read all of its resources from
 		// a zip file natively.
-		char *storagePath = SDL_AndroidGetInternalStoragePath();
+		const char *storagePath = SDL_AndroidGetInternalStoragePath();
 		if(!storagePath)
 			throw runtime_error("Unable to get the Android storage path!");
 		filesystem::path resourcesZip = filesystem::path{storagePath} / "resources.zip";
 		if(!exists(resourcesZip))
 		{
-			Logger::Log("Extracting game resources from the APK (first launch, this may take a minute)...");
+			Logger::Log("Extracting game resources from the APK (first launch, this may take a minute)...",
+				Logger::Level::INFO);
 			ExtractFromAssets("resources.zip", resourcesZip);
 		}
 		resources = resourcesZip;
