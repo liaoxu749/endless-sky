@@ -22,6 +22,92 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 #define STRICT
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#elif defined(__ANDROID__)
+// ESMP: Android lacks libuuid. This minimal shim implements the handful of
+// libuuid calls Endless Sky uses (RFC-4122 v4 UUIDs).
+#include <array>
+#include <cstring>
+#include <fstream>
+#include <random>
+#include <string>
+
+using uuid_t = std::array<unsigned char, 16>;
+
+namespace {
+
+	int uuid_parse(const char *in, uuid_t &out)
+	{
+		auto hexVal = [](char c) -> int {
+			if(c >= '0' && c <= '9') return c - '0';
+			if(c >= 'a' && c <= 'f') return c - 'a' + 10;
+			if(c >= 'A' && c <= 'F') return c - 'A' + 10;
+			return -1;
+		};
+		int nibbles = 0;
+		size_t index = 0;
+		unsigned char current = 0;
+		for(const char *p = in; *p; ++p)
+		{
+			if(*p == '-')
+				continue;
+			int v = hexVal(*p);
+			if(v < 0 || index >= 16)
+				return -1;
+			current = static_cast<unsigned char>((current << 4) | v);
+			if(++nibbles % 2 == 0)
+				out[index++] = current;
+		}
+		return (nibbles == 32 && index == 16) ? 0 : -1;
+	}
+
+	void uuid_generate_random(uuid_t &out)
+	{
+		// Prefer the kernel's UUID generator, falling back to random_device.
+		std::ifstream kernel("/proc/sys/kernel/random/uuid");
+		std::string line;
+		if(std::getline(kernel, line) && uuid_parse(line.c_str(), out) == 0)
+			return;
+		std::random_device device;
+		for(size_t i = 0; i + 3 < out.size(); i += 4)
+		{
+			const unsigned int value = device();
+			out[i] = static_cast<unsigned char>(value);
+			out[i + 1] = static_cast<unsigned char>(value >> 8);
+			out[i + 2] = static_cast<unsigned char>(value >> 16);
+			out[i + 3] = static_cast<unsigned char>(value >> 24);
+		}
+		out[6] = static_cast<unsigned char>((out[6] & 0x0f) | 0x40); // version 4
+		out[8] = static_cast<unsigned char>((out[8] & 0x3f) | 0x80); // RFC-4122 variant
+	}
+
+	int uuid_is_null(const uuid_t &id)
+	{
+		for(const unsigned char b : id)
+			if(b)
+				return 0;
+		return 1;
+	}
+
+	int uuid_compare(const uuid_t &a, const uuid_t &b)
+	{
+		const int result = std::memcmp(a.data(), b.data(), a.size());
+		return result < 0 ? -1 : (result > 0 ? 1 : 0);
+	}
+
+	void uuid_unparse_lower(const uuid_t &id, char *out)
+	{
+		static constexpr char hex[] = "0123456789abcdef";
+		size_t o = 0;
+		for(size_t i = 0; i < 16; ++i)
+		{
+			if(i == 4 || i == 6 || i == 8 || i == 10)
+				out[o++] = '-';
+			out[o++] = hex[id[i] >> 4];
+			out[o++] = hex[id[i] & 0xf];
+		}
+		out[o] = '\0';
+	}
+}
 #else
 #include <uuid/uuid.h>
 #endif

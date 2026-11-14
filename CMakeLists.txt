@@ -210,6 +210,8 @@ if(UNIX)
 	elseif(NOT ES_USE_VCPKG OR ES_USE_SYSTEM_LIBRARIES)
 		find_library(UUID_LIB uuid)
 		target_link_libraries(ExternalLibraries INTERFACE "${UUID_LIB}")
+	elseif(ANDROID)
+		# ESMP: Android has no libuuid; EsUuid.cpp ships a self-contained shim.
 	else()
 		find_package(unofficial-libuuid CONFIG REQUIRED)
 		target_link_libraries(ExternalLibraries INTERFACE unofficial::UUID::uuid)

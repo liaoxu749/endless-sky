@@ -19,6 +19,11 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 // Don't include <windows.h>, which will shadow our Rectangle class.
 #define RPC_NO_WINDOWS_H
 #include <rpc.h>
+#elif defined(__ANDROID__)
+// ESMP: Android has no libuuid; EsUuid.cpp provides a minimal RFC-4122
+// shim. Only the uuid_t type is needed here.
+#include <array>
+using uuid_t = std::array<unsigned char, 16>;
 #else
 #include <uuid/uuid.h>
 #endif
@@ -40,6 +45,9 @@ public:
 #ifdef _WIN32
 		UuidType(const UuidType &other) = default;
 		UUID id = {};
+#elif defined(__ANDROID__)
+		UuidType(const UuidType &other) = default;
+		std::array<unsigned char, 16> id = {};
 #else
 		UuidType(const UuidType &other) { uuid_copy(id, other.id); }
 		uuid_t id = {};
