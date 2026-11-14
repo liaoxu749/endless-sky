@@ -19,8 +19,10 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include "Command.h"
 #include "Engine.h"
+#include "Rectangle.h"
 
 #include <list>
+#include <vector>
 
 class PlayerInfo;
 class ShipEvent;
@@ -79,6 +81,24 @@ private:
 	bool checkSpawns = false;
 
 	Command show;
+
+#ifdef ES_TOUCH
+	// ESMP: touch-control overlay (Android). Screen-edge buttons that
+	// inject held commands into the engine, or synthesize key events.
+	struct TouchButton {
+		const char *label;
+		Command held;
+		bool menuEvent;
+		Rectangle rect;
+	};
+	std::vector<TouchButton> touchButtons;
+	Command touchHeld;
+	bool touchActive = false;
+	void InitTouchButtons();
+	void DrawTouchButtons();
+	bool HandleTouchClick(int x, int y);
+	void HandleTouchRelease();
+#endif
 
 	// Keep track of how long a starting player has spent drifting in deep space.
 	int lostness = 0;

@@ -96,6 +96,10 @@ public:
 	// ESMP: multiplayer session control (host / join from the lobby panel).
 	NetSync &GetNet() { return net; }
 
+	// ESMP/touch: additional command bits treated as "keys currently held"
+	// (virtual buttons on touch devices; merged into keyHeld each frame).
+	void SetInjectedHeld(const Command &command) { injectedHeld = command; }
+
 	// Get any special events that happened in this step.
 	// MainPanel::Step will clear this list.
 	std::list<ShipEvent> &Events();
@@ -332,6 +336,8 @@ private:
 	// Commands that are currently active (and not yet handled). This is a combination
 	// of keyboard and mouse commands (and any other available input device).
 	Command activeCommands;
+	// ESMP/touch: merged into keyHeld by HandleKeyboardInputs.
+	Command injectedHeld;
 	// Keyboard commands that were active in the previous step.
 	Command keyHeld;
 	// Pressing "land" or "board" rapidly toggles targets; pressing it once re-engages landing or boarding.

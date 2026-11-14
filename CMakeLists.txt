@@ -7,6 +7,7 @@ else()
 	option(ES_USE_VCPKG "Use vcpkg to get dependencies." ON)
 endif()
 cmake_dependent_option(ES_GLES "Build the game with OpenGL ES" OFF UNIX OFF)
+cmake_dependent_option(ES_TOUCH "Enable the touch control overlay" ON ANDROID OFF)
 option(ES_USE_SDL3 "Use the newer SDL3 libraries instead of SDL2" OFF)
 cmake_dependent_option(ES_STEAM "Build the game for the Steam Linux runtime" OFF UNIX OFF)
 cmake_dependent_option(ES_USE_SYSTEM_LIBRARIES "Use system libraries instead of the vcpkg ones." ON "APPLE OR ES_STEAM" OFF)
@@ -228,7 +229,6 @@ else()
 
 	find_package(OpenGL REQUIRED)
 	target_link_libraries(ExternalLibraries INTERFACE OpenGL::GL)
-
 	if(APPLE)
 		# Apple deprecated OpenGL in MacOS 10.14, but we don't care.
 		target_compile_definitions(EndlessSkyLib PUBLIC GL_SILENCE_DEPRECATION)
@@ -241,6 +241,9 @@ else()
 		endif()
 		target_link_libraries(ExternalLibraries INTERFACE ${GLEW_TARGET_NAME})
 	endif()
+endif()
+if(ES_TOUCH)
+	target_compile_definitions(EndlessSkyLib PUBLIC ES_TOUCH)
 endif()
 
 # Setup for the testing frameworks.

@@ -2230,6 +2230,8 @@ void Engine::HandleKeyboardInputs()
 	// Determine which new keys were pressed by the player.
 	Command oldHeld = keyHeld;
 	keyHeld.ReadKeyboard();
+	// ESMP/touch: merge the virtual-button bits into the held keys.
+	keyHeld |= injectedHeld;
 	Command keyDown = keyHeld.AndNot(oldHeld);
 
 	// Certain commands are always sent when the corresponding key is depressed.

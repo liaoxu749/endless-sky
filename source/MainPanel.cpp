@@ -42,6 +42,13 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include "opengl.h"
 
+#ifdef ES_TOUCH
+#include "shader/FillShader.h"
+#include "Screen.h"
+#include "text/Font.h"
+#include "text/FontSet.h"
+#endif
+
 #include <cmath>
 #include <sstream>
 #include <string>
@@ -58,6 +65,9 @@ MainPanel::MainPanel(PlayerInfo &player)
 	: player(player), engine(player)
 {
 	SetIsFullScreen(true);
+#ifdef ES_TOUCH
+	InitTouchButtons();
+#endif
 }
 
 
@@ -159,6 +169,10 @@ void MainPanel::Draw()
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	engine.Draw();
+
+#ifdef ES_TOUCH
+	DrawTouchButtons();
+#endif
 
 	if(isDragging)
 	{
@@ -269,6 +283,14 @@ bool MainPanel::Click(int x, int y, MouseButton button, int clicks)
 	}
 
 	// Don't respond to clicks if another panel is active.
+#ifdef ES_TOUCH
+	// ESMP/touch: virtual buttons take priority over game clicks.
+	if(button == MouseButton::LEFT && HandleTouchClick(x, y))
+	{
+		touchActive = true;
+		return true;
+	}
+#endif
 	if(!canClick)
 		return true;
 	// Only allow drags that start when clicking was possible.
@@ -302,6 +324,14 @@ bool MainPanel::Drag(double dx, double dy)
 
 bool MainPanel::Release(int x, int y, MouseButton button)
 {
+#ifdef ES_TOUCH
+	if(touchActive)
+	{
+		HandleTouchRelease();
+		touchActive = false;
+		return true;
+	}
+#endif
 	if(button != MouseButton::LEFT)
 		return false;
 
@@ -719,3 +749,103 @@ void MainPanel::StepEvents(bool &isActive)
 		handledFront = false;
 	}
 }
+
+
+
+#ifdef ES_TOUCH
+void MainPanel::InitTouchButtons()
+{
+	// Two columns hugging the screen edges (landscape orientation).
+	const double w = 92.;
+	const double h = 58.;
+	const double gap = 10.;
+	const double margin = 12.;
+	const double left = Screen::Left() + margin;
+	const double right = Screen::Right() - margin - w;
+	const double bottom = Screen::Bottom() - margin - h;
+
+	auto column = [&](double x, const std::vector<TouchButton> &buttons)
+	{
+		double y = bottom;
+		for(const TouchButton &button : buttons)
+		{
+			TouchButton placed = button;
+			placed.rect = Rectangle(Point(x + w / 2., y + h / 2.), Point(w, h));
+			touchButtons.push_back(std::move(placed));
+			y -= h + gap;
+		}
+	};
+
+	// Bottom-up in each column.
+	column(left, {
+		{"REV", Command::BACK, false, Rectangle()},
+		{"FWD", Command::FORWARD, false, Rectangle()},
+		{"L", Command::LEFT, false, Rectangle()},
+		{"R", Command::RIGHT, false, Rectangle()},
+	});
+	column(right, {
+		{"FIRE", Command::PRIMARY, false, Rectangle()},
+		{"JUMP", Command::JUMP, false, Rectangle()},
+		{"LAND", Command::LAND, false, Rectangle()},
+		{"BOARD", Command::BOARD, false, Rectangle()},
+		{"MENU", Command(), true, Rectangle()},
+	});
+}
+
+
+
+void MainPanel::DrawTouchButtons()
+{
+	const Font &font = FontSet::Get(14);
+	for(const TouchButton &button : touchButtons)
+	{
+		const bool pressed = static_cast<bool>(button.held) && touchHeld.Has(button.held);
+		const Color &fill = *GameData::Colors().Get(pressed ? "drag select" : "dark");
+		FillShader::Fill(button.rect, fill);
+		const Color &text = *GameData::Colors().Get("medium");
+		const double labelWidth = font.Width(button.label);
+		font.Draw(button.label, button.rect.Center() - Point(labelWidth / 2., 9.), text);
+	}
+}
+
+
+
+bool MainPanel::HandleTouchClick(int x, int y)
+{
+	const Point point(x, y);
+	bool consumed = false;
+	for(TouchButton &button : touchButtons)
+	{
+		if(!button.rect.Contains(point))
+			continue;
+		consumed = true;
+		if(button.menuEvent)
+		{
+			// The menu is opened through the event loop (main.cpp), so
+			// synthesize a key event instead of injecting a command bit.
+			SDL_Event event{};
+			event.type = SDL_KEYDOWN;
+			event.key.keysym.sym = SDLK_ESCAPE;
+			SDL_PushEvent(&event);
+			SDL_Event up{};
+			up.type = SDL_KEYUP;
+			up.key.keysym.sym = SDLK_ESCAPE;
+			SDL_PushEvent(&up);
+		}
+		else if(button.held)
+		{
+			touchHeld |= button.held;
+			engine.SetInjectedHeld(touchHeld);
+		}
+	}
+	return consumed;
+}
+
+
+
+void MainPanel::HandleTouchRelease()
+{
+	touchHeld.Clear();
+	engine.SetInjectedHeld(touchHeld);
+}
+#endif
