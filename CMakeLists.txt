@@ -338,7 +338,8 @@ endif()
 
 # Link with the library dependencies.
 if(ANDROID)
-	target_link_libraries(main PRIVATE ExternalLibraries EndlessSkyLib $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main> log)
+	find_package(Iconv REQUIRED)
+	target_link_libraries(main PRIVATE ExternalLibraries EndlessSkyLib $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main> log Iconv::Iconv)
 else()
 	target_link_libraries(EndlessSky PRIVATE ExternalLibraries EndlessSkyLib $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>)
 endif()
