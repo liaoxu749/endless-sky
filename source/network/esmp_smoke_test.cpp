@@ -28,7 +28,7 @@ int main()
 	{
 		server.Tick();
 		client.Tick();
-		client.SetInput(0x1u, 0x2u, 300.0, 400.0);
+		client.SetInput(0x1u, 0x2u, 0.0, 300.0, 400.0);
 		ESMP::InputPacket input;
 		if(server.GetInput(1, &input))
 		{

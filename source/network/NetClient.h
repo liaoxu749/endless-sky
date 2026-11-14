@@ -10,6 +10,7 @@ See DESIGN.md.
 #include "Protocol.h"
 
 #include <chrono>
+#include <map>
 #include <string>
 #include <utility>
 #include <vector>
@@ -38,7 +39,12 @@ public:
 
 	// The game layer provides the local player's latest input every frame;
 	// it goes out over UDP at SNAPSHOT_HZ.
-	void SetInput(uint32_t commands, uint32_t fire, double mouseX, double mouseY);
+	void SetInput(uint64_t commands, uint64_t fire, double turn,
+		double mouseX, double mouseY);
+	// Announce which model our flagship flies (after the welcome).
+	void SendPlayerInfo(const std::string &model);
+	// Slot -> ship model, learned from PLAYER_INFO frames (0 = host).
+	const std::map<uint8_t, std::string> &PlayerModels() const { return playerModels; }
 
 	// One remote entity from the latest authoritative snapshot.
 	struct RemoteEntity {
@@ -82,6 +88,7 @@ private:
 	uint32_t snapshotSeq = 0;
 
 	ESMP::InputPacket pendingInput{};
+	std::map<uint8_t, std::string> playerModels;
 
 	std::chrono::steady_clock::time_point startedAt;
 	std::chrono::steady_clock::time_point lastPing;

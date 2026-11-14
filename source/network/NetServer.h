@@ -19,6 +19,7 @@ struct NetSession {
 	uint8_t slot = 0;          // 1..N; 0 is reserved for the host
 	bool helloDone = false;
 	std::string name;
+	std::string model;         // ship model the client's flagship flies
 	NetSocket tcp;
 	ESMPAddress udp;           // learned from the first INPUT datagram
 	std::vector<uint8_t> tcpBuf;
@@ -40,6 +41,12 @@ public:
 	// The host provides the system-name table so clients can translate
 	// their local system names into the host's session ids.
 	void SetSystemTable(std::vector<std::pair<uint16_t, std::string>> table);
+	// Announces the host's flagship model to every client (PLAYER_INFO).
+	void AnnounceHostModel(const std::string &model);
+	// Ship model announced by the given slot (empty if unknown yet).
+	std::string Model(uint8_t slot) const;
+	// Whether a welcomed client with this slot is connected.
+	bool HasClient(uint8_t slot) const;
 
 	// Pump sockets; call once per game frame (60Hz).
 	void Tick();
@@ -66,6 +73,7 @@ private:
 	void SendBeacon();
 	void SendFrame(NetSession &session, ESMP::Msg type, const void *payload,
 		uint16_t length);
+	void SendPlayerInfo(NetSession &session, uint8_t slot, const std::string &model);
 
 	NetSocket tcpListener;
 	NetSocket udp;
@@ -81,6 +89,7 @@ private:
 
 	// System name -> session id, sent to clients after WELCOME.
 	std::vector<std::pair<uint16_t, std::string>> systemTable;
+	std::string hostModel;
 
 	struct EntityState {
 		uint16_t systemId = 0;

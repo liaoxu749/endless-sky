@@ -26,6 +26,7 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 #include "Information.h"
 #include "Interface.h"
 #include "LoadPanel.h"
+#include "LobbyPanel.h"
 #include "Logger.h"
 #include "MainPanel.h"
 #include "pi.h"
@@ -217,6 +218,8 @@ bool MenuPanel::KeyDown(SDL_Keycode key, Uint16 mod, const Command &command, boo
 		panel->SetCallback(player.Pilot().get(), &PilotProfile::Save);
 		GetUI().Push(panel);
 	}
+	else if(key == 'u')
+		GetUI().Push(new LobbyPanel(player, gamePanels));
 	else if(key == 'q')
 	{
 		GetUI().Quit();

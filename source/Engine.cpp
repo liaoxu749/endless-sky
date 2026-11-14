@@ -537,6 +537,8 @@ void Engine::Step(bool isActive)
 	}
 
 	wasActive = isActive;
+	// ESMP: pump the multiplayer session while the calculation thread is paused.
+	net.Step(player, ships, activeCommands);
 	Audio::Update(camera.Center());
 
 	// Update the zoom value now that the calculation thread is paused.
@@ -1824,6 +1826,9 @@ void Engine::CalculateUnpaused(const Ship *flagship, const System *playerSystem)
 	for(const shared_ptr<Ship> &it : ships)
 	{
 		if(it == player.FlagshipPtr())
+			continue;
+		// ESMP: client-side ghost ships are driven by network snapshots.
+		if(it->IsRemote() && net.IsClient())
 			continue;
 		bool wasUntargetable = !it->IsTargetable();
 		MoveShip(it);

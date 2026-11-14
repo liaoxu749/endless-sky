@@ -54,14 +54,23 @@ void NetClient::Disconnect()
 	rttMs = -1.f;
 }
 
-void NetClient::SetInput(uint32_t commands, uint32_t fire, double mouseX,
-	double mouseY)
+void NetClient::SetInput(uint64_t commands, uint64_t fire, double turn,
+	double mouseX, double mouseY)
 {
 	pendingInput.slot = slot;
 	pendingInput.commands = commands;
 	pendingInput.fire = fire;
+	pendingInput.turn = static_cast<float>(turn);
 	pendingInput.mouse[0] = static_cast<float>(mouseX);
 	pendingInput.mouse[1] = static_cast<float>(mouseY);
+}
+
+void NetClient::SendPlayerInfo(const std::string &model)
+{
+	ESMP::PlayerInfoPacket packet{};
+	packet.slot = slot;
+	strncpy(packet.model, model.c_str(), ESMP::MODEL_LENGTH - 1);
+	SendFrame(ESMP::Msg::PLAYER_INFO, &packet, sizeof(packet));
 }
 
 void NetClient::Tick()
@@ -144,6 +153,17 @@ void NetClient::PollTcp()
 					memcpy(&entry, payload, sizeof(entry));
 					entry.name[ESMP::NAME_LENGTH - 1] = '\0';
 					systemTable.emplace_back(entry.id, entry.name);
+				}
+				break;
+			}
+			case ESMP::Msg::PLAYER_INFO:
+			{
+				if(payload && length >= sizeof(ESMP::PlayerInfoPacket))
+				{
+					ESMP::PlayerInfoPacket packet;
+					memcpy(&packet, payload, sizeof(packet));
+					packet.model[ESMP::MODEL_LENGTH - 1] = '\0';
+					playerModels[packet.slot] = packet.model;
 				}
 				break;
 			}

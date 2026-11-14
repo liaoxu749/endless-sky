@@ -187,6 +187,8 @@ target_sources(EndlessSkyLib PRIVATE
 	LoadingCircle.h
 	LoadPanel.cpp
 	LoadPanel.h
+	LobbyPanel.cpp
+	LobbyPanel.h
 	LocationFilter.cpp
 	LocationFilter.h
 	LogbookPanel.cpp
@@ -395,6 +397,8 @@ target_sources(EndlessSkyLib PRIVATE
 	network/NetServer.h
 	network/NetSocket.cpp
 	network/NetSocket.h
+	network/NetSync.cpp
+	network/NetSync.h
 	network/Protocol.h
 	opengl.cpp
 	opengl.h

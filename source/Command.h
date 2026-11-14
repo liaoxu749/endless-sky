@@ -149,6 +149,11 @@ public:
 	Command &operator|=(const Command &command);
 
 
+	// ESMP: raw 64-bit state access for network serialization.
+	uint64_t State() const { return state; }
+	static Command FromState(uint64_t state) { return Command(state); }
+
+
 private:
 	explicit Command(uint64_t state);
 	Command(uint64_t state, const std::string &text);

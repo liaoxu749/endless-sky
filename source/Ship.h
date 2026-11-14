@@ -294,6 +294,11 @@ public:
 	// Set the commands for this ship to follow this timestep.
 	void SetCommands(const Command &command);
 	void SetCommands(const FireCommand &firingCommand);
+	// ESMP: network-driven ships skip local physics; their state is pushed
+	// directly from snapshots (see network/NetSync.h).
+	void SetNetworkState(const Point &position, const Point &velocity, const Angle &facing);
+	void SetRemote(bool remote) { isRemote = remote; }
+	bool IsRemote() const { return isRemote; }
 	const Command &Commands() const;
 	const FireCommand &FiringCommands() const noexcept;
 	// Move this ship. A ship may create effects as it moves, in particular if
@@ -756,6 +761,8 @@ private:
 	// damage to the ship that should remain there. If this is true, Engine won't recharge the ship.
 	bool isSkipRecharging = false;
 	bool isYours = false;
+	// ESMP: this ship is driven by the network, not by local AI or physics.
+	bool isRemote = false;
 	bool isParked = false;
 	bool shouldDeploy = false;
 	bool forceDeployed = false;

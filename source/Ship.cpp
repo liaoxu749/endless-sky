@@ -2105,6 +2105,16 @@ void Ship::SetCommands(const FireCommand &firingCommand)
 
 
 
+void Ship::SetNetworkState(const Point &position, const Point &velocity,
+	const Angle &facing)
+{
+	this->position = position;
+	this->velocity = velocity;
+	angle = facing;
+}
+
+
+
 const Command &Ship::Commands() const
 {
 	return commands;

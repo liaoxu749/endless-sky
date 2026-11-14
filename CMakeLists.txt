@@ -245,7 +245,9 @@ endif()
 
 # Setup for the testing frameworks.
 include(CTest)
-if(BUILD_TESTING)
+if(BUILD_TESTING AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests")
+	# ESMP fork note: the tests directory is optional so that sparse
+	# checkouts (source/ only) can still build the full library.
 	add_subdirectory(tests)
 endif()
 

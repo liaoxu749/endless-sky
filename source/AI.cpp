@@ -788,6 +788,9 @@ void AI::Step(Command &activeCommands)
 		// Skip any carried fighters or drones that are somehow in the list.
 		if(!it->GetSystem())
 			continue;
+		// ESMP: remote ships get their commands from the network, not the AI.
+		if(it->IsRemote())
+			continue;
 
 		if(it.get() == flagship)
 		{

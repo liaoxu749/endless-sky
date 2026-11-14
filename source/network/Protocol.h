@@ -23,7 +23,9 @@ namespace ESMP {
 	constexpr int MAX_SNAPSHOT_ENTITIES = 32;
 	// Name/text lengths include the NUL terminator.
 	constexpr int NAME_LENGTH = 32;
+	constexpr int MODEL_LENGTH = 32;
 	constexpr int CHAT_LENGTH = 128;
+	constexpr int MAX_PLAYERS = 4;
 
 	// Wire message types.
 	enum class Msg : uint8_t {
@@ -35,6 +37,7 @@ namespace ESMP {
 		// TCP, host -> client.
 		WELCOME,        // payload: WelcomePacket
 		SYS_TABLE,      // payload: SystemEntry, one frame per system
+		PLAYER_INFO,    // payload: PlayerInfoPacket, bidirectional
 		FIRE_EVENT,     // payload: FireEventPacket
 		SHIP_EVENT,     // payload: ShipEventPacket
 		SYS_CHANGE,     // payload: SysChangePacket
@@ -65,14 +68,22 @@ namespace ESMP {
 		char name[NAME_LENGTH]; // system name as it appears in the data files
 	};
 
-	// Client input state, sent at SNAPSHOT_HZ. The two bitsets are the raw
-	// Command / FireCommand sets (Command.h, FireCommand.h). The slot field
-	// lets the host attribute UDP datagrams without a handshake.
+	// Client input state, sent at SNAPSHOT_HZ. The bitsets mirror the 64-bit
+	// state of Command / FireCommand (Command.h, FireCommand.h). The slot
+	// field lets the host attribute UDP datagrams without a handshake.
 	struct InputPacket {
 		uint8_t slot;
-		uint32_t commands;
-		uint32_t fire;
+		uint64_t commands;
+		uint64_t fire;
+		float turn;
 		float mouse[2]; // aim point, engine coordinates
+	};
+
+	// Bidirectional: announces the ship model a slot flies, so peers can
+	// instantiate a matching ship without shipping game data.
+	struct PlayerInfoPacket {
+		uint8_t slot;
+		char model[MODEL_LENGTH];
 	};
 
 	struct PingPacket { float sentAt; };

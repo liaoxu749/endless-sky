@@ -24,6 +24,7 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 #include "CollisionSet.h"
 #include "Color.h"
 #include "Command.h"
+#include "network/NetSync.h"
 #include "DamageProfile.h"
 #include "shader/DrawList.h"
 #include "EscortDisplay.h"
@@ -91,6 +92,9 @@ public:
 
 	// Give a command on behalf of the player, used for integration tests.
 	void GiveCommand(const Command &command);
+
+	// ESMP: multiplayer session control (host / join from the lobby panel).
+	NetSync &GetNet() { return net; }
 
 	// Get any special events that happened in this step.
 	// MainPanel::Step will clear this list.
@@ -256,6 +260,9 @@ private:
 	std::vector<Ship *> hasTractorBeam;
 
 	AI ai;
+
+	// ESMP: LAN multiplayer session.
+	NetSync net;
 
 	TaskQueue queue;
 	TaskQueue asyncQueue;

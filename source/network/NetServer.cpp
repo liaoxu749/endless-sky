@@ -126,6 +126,32 @@ void NetServer::SetSystemTable(std::vector<std::pair<uint16_t, std::string>> tab
 	systemTable = std::move(table);
 }
 
+void NetServer::AnnounceHostModel(const std::string &model)
+{
+	hostModel = model;
+	for(auto &session : clients)
+		if(session.alive && session.helloDone)
+			SendPlayerInfo(session, 0, model);
+}
+
+std::string NetServer::Model(uint8_t slot) const
+{
+	if(slot == 0)
+		return hostModel;
+	for(const NetSession &session : clients)
+		if(session.alive && session.helloDone && session.slot == slot)
+			return session.model;
+	return "";
+}
+
+bool NetServer::HasClient(uint8_t slot) const
+{
+	for(const NetSession &session : clients)
+		if(session.alive && session.helloDone && session.slot == slot)
+			return true;
+	return false;
+}
+
 
 void NetServer::AcceptNewClients()
 {
@@ -218,6 +244,20 @@ void NetServer::PollClientTcp(NetSession &session)
 					strncpy(packet.name, entry.second.c_str(), ESMP::NAME_LENGTH - 1);
 					SendFrame(session, ESMP::Msg::SYS_TABLE, &packet, sizeof(packet));
 				}
+				break;
+			}
+			case ESMP::Msg::PLAYER_INFO:
+			{
+				if(!payload || length < sizeof(ESMP::PlayerInfoPacket))
+					break;
+				ESMP::PlayerInfoPacket packet;
+				memcpy(&packet, payload, sizeof(packet));
+				packet.model[ESMP::MODEL_LENGTH - 1] = '\0';
+				session.model = packet.model;
+				// Relay to every other client so peers can build the ship.
+				for(auto &other : clients)
+					if(other.alive && other.helloDone && other.slot != session.slot)
+						SendPlayerInfo(other, session.slot, session.model);
 				break;
 			}
 			case ESMP::Msg::PING:
@@ -336,4 +376,13 @@ void NetServer::SendFrame(NetSession &session, ESMP::Msg type,
 	int bytes = ESMP::FrameMessage(frame, sizeof(frame), type, payload, length);
 	if(bytes > 0)
 		session.tcp.Send(frame, static_cast<size_t>(bytes));
+}
+
+void NetServer::SendPlayerInfo(NetSession &session, uint8_t slot,
+	const std::string &model)
+{
+	ESMP::PlayerInfoPacket packet{};
+	packet.slot = slot;
+	strncpy(packet.model, model.c_str(), ESMP::MODEL_LENGTH - 1);
+	SendFrame(session, ESMP::Msg::PLAYER_INFO, &packet, sizeof(packet));
 }
