@@ -32,6 +32,7 @@ using namespace std;
 
 #ifdef __ANDROID__
 #include "SDL_system.h"
+#include <jni.h>
 
 namespace {
 	// ESMP: force the Android soft keyboard to show, bypassing SDL's
