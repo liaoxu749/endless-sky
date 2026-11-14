@@ -388,8 +388,10 @@ bool Edit::OnFocus(bool f)
 #ifdef ES_USE_SDL3
 		SDL_StartTextInput(SDL_GetKeyboardFocus());
 #else
-		// ESMP/android: SDL needs a nonzero input rectangle on Android or the
-		// soft keyboard never appears (desktop IMEs ignore it).
+		// ESMP/android: SDL's text input is ACTIVE by default, so a plain
+		// SDL_StartTextInput() is a no-op there and the soft keyboard never
+		// shows. Force an inactive -> active transition (that transition is
+		// what makes SDL's Android backend pop the keyboard).
 		const Point topLeft = Screen::TopLeft();
 		const Rectangle &fieldRect = position;
 		SDL_Rect inputRect{
@@ -397,6 +399,7 @@ bool Edit::OnFocus(bool f)
 			static_cast<int>(fieldRect.Top() + topLeft.Y()),
 			static_cast<int>(fieldRect.Width()),
 			static_cast<int>(fieldRect.Height())};
+		SDL_StopTextInput();
 		SDL_SetTextInputRect(&inputRect);
 		SDL_StartTextInput();
 #endif
