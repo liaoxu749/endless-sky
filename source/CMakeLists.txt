@@ -391,6 +391,8 @@ target_sources(EndlessSkyLib PRIVATE
 	WormholeStrategy.h
 	ZipFile.cpp
 	ZipFile.h
+	VirtualKeyboard.cpp
+	VirtualKeyboard.h
 	network/NetClient.cpp
 	network/NetClient.h
 	network/NetServer.cpp

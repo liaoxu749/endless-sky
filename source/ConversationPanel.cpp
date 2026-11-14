@@ -15,6 +15,8 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include "ConversationPanel.h"
 
+#include "VirtualKeyboard.h"
+
 #include "text/Alignment.h"
 #include "audio/Audio.h"
 #include "BoardingPanel.h"
@@ -216,6 +218,17 @@ void ConversationPanel::Draw()
 
 		// Handle clicks on this button.
 		AddZone(Rectangle::FromCorner(off, Point(width, height)), SDLK_RETURN);
+#ifdef __ANDROID__
+		// ESMP: toggle for the self-drawn touch keyboard.
+		const string kbLabel = VirtualKeyboard::Visible() ? "[hide kb]" : "[keyboard]";
+		const int kbWidth = font.Width(kbLabel);
+		Point kbOff(Screen::Left() + MARGIN, point.Y() + height * 2.);
+		AddZone(Rectangle::FromCorner(kbOff, Point(kbWidth, height)),
+			[](){ VirtualKeyboard::Toggle(); });
+		font.Draw(kbLabel, kbOff, bright);
+		if(VirtualKeyboard::Visible())
+			VirtualKeyboard::Draw();
+#endif
 	}
 	else
 	{
@@ -265,6 +278,18 @@ void ConversationPanel::UpdateTextDisplay()
 
 
 // Handle key presses.
+bool ConversationPanel::Click(int x, int y, MouseButton button, int clicks)
+{
+#ifdef __ANDROID__
+	// ESMP: taps on the self-drawn keyboard are handled here first.
+	if(VirtualKeyboard::Visible() && VirtualKeyboard::Click(Point(x, y)))
+		return true;
+#endif
+	return Panel::Click(x, y, button, clicks);
+}
+
+
+
 bool ConversationPanel::KeyDown(SDL_Keycode key, Uint16 mod, const Command &command, bool isNewPress)
 {
 	UI::UISound sound = UI::UISound::NORMAL;
