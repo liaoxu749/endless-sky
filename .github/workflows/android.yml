@@ -21,7 +21,7 @@ jobs:
       - name: Fetch SDL2 Java glue
         run: |
           chmod +x android/fetch-sdl-java.sh
-          ./android/fetch-sdl-java.sh 2.30.8 android/app/src/main/java
+          ./android/fetch-sdl-java.sh 2.32.10 android/app/src/main/java
 
       # The project bootstraps its own vcpkg checkout (utils/vcpkg_bootstrap.cmake)
       # and appends the sdl2 + system-libs manifest features automatically.
