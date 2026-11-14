@@ -338,15 +338,8 @@ endif()
 
 # Link with the library dependencies.
 if(ANDROID)
-	# vcpkg's FindIconv wrapper mis-detects the android triplet; point the
-	# linker straight at the libiconv static library it installed.
-	find_library(ICONV_LIBRARY NAMES iconv libiconv
-		PATHS "${CMAKE_BINARY_DIR}/vcpkg_installed/${VCPKG_TARGET_TRIPLET}/lib"
-		NO_DEFAULT_PATH)
-	if(NOT ICONV_LIBRARY)
-		message(FATAL_ERROR "libiconv not found in vcpkg_installed — check the manifest")
-	endif()
-	target_link_libraries(main PRIVATE ExternalLibraries EndlessSkyLib $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main> log "${ICONV_LIBRARY}")
+	# bionic (Android 9 / API 28+) provides iconv in libc; no extra lib needed.
+	target_link_libraries(main PRIVATE ExternalLibraries EndlessSkyLib $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main> log)
 else()
 	target_link_libraries(EndlessSky PRIVATE ExternalLibraries EndlessSkyLib $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>)
 endif()

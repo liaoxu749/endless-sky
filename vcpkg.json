@@ -19,10 +19,6 @@
 					"name": "glew",
 					"platform": "!osx & !android"
 				},
-			{
-				"name": "libiconv",
-				"platform": "android"
-			},
 				"libavif",
 				"libpng",
 				"libjpeg-turbo",
