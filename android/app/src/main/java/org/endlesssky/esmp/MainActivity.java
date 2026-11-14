@@ -8,4 +8,13 @@ import org.libsdl.app.SDLActivity;
  * resources zip is extracted from the APK assets on first launch.
  */
 public class MainActivity extends SDLActivity {
+	// SDLActivity loads "SDL2" plus companion libs by default, but our build
+	// statically links SDL2 into libmain.so, so only that library exists.
+	@Override
+	protected String[] getLibraries() {
+		return new String[] {
+			"main"
+		};
+	}
 }
+
