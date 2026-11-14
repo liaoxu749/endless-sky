@@ -327,7 +327,11 @@ else()
 endif()
 
 # Link with the library dependencies.
-target_link_libraries(EndlessSky PRIVATE ExternalLibraries EndlessSkyLib $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>)
+if(ANDROID)
+	target_link_libraries(main PRIVATE ExternalLibraries EndlessSkyLib $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main> log)
+else()
+	target_link_libraries(EndlessSky PRIVATE ExternalLibraries EndlessSkyLib $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>)
+endif()
 
 # Copy the MinGW runtime DLLs if necessary.
 if(MINGW AND WIN32)
@@ -378,7 +382,7 @@ elseif(WIN32)
 		# Clear the previous contents of the installation directory to prevent data conflicts.
 		"RMDir /r $INSTDIR")
 	include(CPack)
-elseif(UNIX)
+elseif(UNIX AND NOT ANDROID)
 	# Install the binary.
 	install(TARGETS EndlessSky CONFIGURATIONS Release RUNTIME DESTINATION games)
 
