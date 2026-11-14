@@ -85,7 +85,7 @@ endif()
 find_package(PNG REQUIRED)
 find_package(JPEG REQUIRED)
 find_package(libavif REQUIRED)
-if(NOT APPLE)
+if(NOT APPLE AND NOT ES_GLES)
 	find_package(GLEW REQUIRED)
 endif()
 
@@ -218,8 +218,13 @@ endif()
 
 # Link with OpenGL or OpenGL ES.
 if(ES_GLES)
-	find_package(OpenGL REQUIRED OpenGL EGL)
-	target_link_libraries(ExternalLibraries INTERFACE OpenGL::OpenGL OpenGL::EGL)
+	if(ANDROID)
+		# The NDK sysroot ships the GLES3/EGL headers and libraries directly.
+		target_link_libraries(ExternalLibraries INTERFACE EGL GLESv3)
+	else()
+		find_package(OpenGL REQUIRED OpenGL EGL)
+		target_link_libraries(ExternalLibraries INTERFACE OpenGL::OpenGL OpenGL::EGL)
+	endif()
 	target_compile_definitions(EndlessSkyLib PUBLIC ES_GLES)
 else()
 	# The Steam runtime can't rely on GLVND being available, so link against the legacy interface.

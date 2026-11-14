@@ -15,6 +15,9 @@ You should have received a copy of the GNU General Public License along with
 this program. If not, see <https://www.gnu.org/licenses/>.
 */
 
+#ifdef __ANDROID__
+#include "SDL.h" // Provides the main -> SDL_main rename for Android.
+#endif
 #include "audio/Audio.h"
 #include "Command.h"
 #include "Conversation.h"
