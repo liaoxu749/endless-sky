@@ -79,7 +79,10 @@ protected:
 	virtual bool TextInput(const std::string &s) override;
 
 #ifdef __ANDROID__
-	// ESMP: on-screen button that force-shows the soft keyboard.
+	// ESMP: self-drawn touch keyboard (works without the Android IME).
+	static bool VirtualKeyboardVisible();
+	static void ToggleVirtualKeyboard();
+	bool HandleVirtualKeyboard(const Point &p);
 	Rectangle KbButtonRect() const;
 #endif
 

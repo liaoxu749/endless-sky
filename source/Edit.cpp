@@ -27,51 +27,102 @@ this program. If not, see <https://www.gnu.org/licenses/>.
 #include "SDL.h"
 
 #include <cassert>
+#include <cctype>
 
 using namespace std;
 
-#ifdef __ANDROID__
-#include "SDL_system.h"
-#include <jni.h>
 
 namespace {
-	// ESMP: force the Android soft keyboard to show, bypassing SDL's
-	// text-input state machine entirely (the InputMethodManager is toggled
-	// with SHOW_FORCED, which works regardless of view focus).
-	void ForceShowKeyboard()
+	// ESMP: self-drawn touch keyboard (no dependency on the Android IME).
+	bool vkVisible = false;
+	bool vkShift = false;
+	bool vkDigits = false;
+
+	struct VkKey {
+		std::string label;
+		int kind; // 0 char, 1 shift, 2 back, 3 page, 4 hide, 5 space, -1 spacer
+		char ch;
+		double wf;
+		Rectangle rect;
+	};
+
+	vector<VkKey> VkKeys()
 	{
-		JNIEnv *env = static_cast<JNIEnv *>(SDL_AndroidGetJNIEnv());
-		if(!env)
-			return;
-		jobject activity = static_cast<jobject>(SDL_AndroidGetActivity());
-		if(!activity)
-			return;
-		jclass activityClass = env->GetObjectClass(activity);
-		jmethodID getSystemService = env->GetMethodID(activityClass,
-			"getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;");
-		jobject manager = nullptr;
-		if(getSystemService)
+		vector<VkKey> keys;
+		const double kh = min(110., Screen::Height() / 10.);
+		const double margin = 6.;
+		const double gap = 6.;
+		const double bottom = Screen::Bottom() - margin;
+
+		auto addRow = [&](std::initializer_list<VkKey> items, double y)
 		{
-			jstring serviceName = env->NewStringUTF("input_method");
-			manager = env->CallObjectMethod(activity, getSystemService, serviceName);
-			env->DeleteLocalRef(serviceName);
-		}
-		if(manager)
+			double total = 0.;
+			for(const VkKey &k : items)
+				total += k.wf;
+			const double avail = Screen::Width() - 2 * margin - (items.size() - 1) * gap;
+			double x = margin;
+			for(const VkKey &k : items)
+			{
+				VkKey key = k;
+				const double w = avail * key.wf / total;
+				key.rect = Rectangle(Point(x + w / 2., y + kh / 2.), Point(w, kh));
+				keys.push_back(std::move(key));
+				x += w + gap;
+			}
+		};
+
+		const std::string shiftLabel = vkShift ? "SHIFT" : "shift";
+		if(!vkDigits)
 		{
-			jclass managerClass = env->GetObjectClass(manager);
-			jmethodID toggle = env->GetMethodID(managerClass, "toggleSoftInput", "(II)V");
-			if(toggle)
-				env->CallVoidMethod(manager, toggle, 2 /* SHOW_FORCED */, 0);
-			env->DeleteLocalRef(managerClass);
-			env->DeleteLocalRef(manager);
+			addRow({{"123", 3, ' ', 2.}, {"space", 5, ' ', 6.}, {"hide", 4, ' ', 2.}},
+				bottom - kh);
+			addRow({{shiftLabel, 1, ' ', 2.}, {"z", 0, 'z', 1.}, {"x", 0, 'x', 1.},
+				{"c", 0, 'c', 1.}, {"v", 0, 'v', 1.}, {"b", 0, 'b', 1.},
+				{"n", 0, 'n', 1.}, {"m", 0, 'm', 1.}, {"back", 2, ' ', 2.}},
+				bottom - 2 * kh - gap);
+			addRow({{"", -1, ' ', .5}, {"a", 0, 'a', 1.}, {"s", 0, 's', 1.},
+				{"d", 0, 'd', 1.}, {"f", 0, 'f', 1.}, {"g", 0, 'g', 1.},
+				{"h", 0, 'h', 1.}, {"j", 0, 'j', 1.}, {"k", 0, 'k', 1.},
+				{"l", 0, 'l', 1.}, {"", -1, ' ', .5}},
+				bottom - 3 * kh - 2 * gap);
+			addRow({{"q", 0, 'q', 1.}, {"w", 0, 'w', 1.}, {"e", 0, 'e', 1.},
+				{"r", 0, 'r', 1.}, {"t", 0, 't', 1.}, {"y", 0, 'y', 1.},
+				{"u", 0, 'u', 1.}, {"i", 0, 'i', 1.}, {"o", 0, 'o', 1.},
+				{"p", 0, 'p', 1.}},
+				bottom - 4 * kh - 3 * gap);
 		}
-		if(env->ExceptionCheck())
-			env->ExceptionClear();
-		env->DeleteLocalRef(activityClass);
-		env->DeleteLocalRef(activity);
+		else
+		{
+			addRow({{"abc", 3, ' ', 2.}, {"space", 5, ' ', 6.}, {"hide", 4, ' ', 2.}},
+				bottom - kh);
+			addRow({{".", 0, '.', 1.}, {",", 0, ',', 1.}, {"-", 0, '-', 1.},
+				{"'", 0, 0x27, 1.}, {"!", 0, '!', 1.}, {"?", 0, '?', 1.},
+				{"(", 0, '(', 1.}, {")", 0, ')', 1.}, {"@", 0, '@', 1.}},
+				bottom - 2 * kh - gap);
+			addRow({{"1", 0, '1', 1.}, {"2", 0, '2', 1.}, {"3", 0, '3', 1.},
+				{"4", 0, '4', 1.}, {"5", 0, '5', 1.}, {"6", 0, '6', 1.},
+				{"7", 0, '7', 1.}, {"8", 0, '8', 1.}, {"9", 0, '9', 1.},
+				{"0", 0, '0', 1.}},
+				bottom - 3 * kh - 2 * gap);
+		}
+		return keys;
+	}
+
+	void DrawVirtualKeyboard()
+	{
+		const Font &font = FontSet::Get(16);
+		for(const VkKey &key : VkKeys())
+		{
+			if(key.kind < 0)
+				continue;
+			const bool active = (key.kind == 1 && vkShift) || (key.kind == 3 && vkDigits);
+			FillShader::Fill(key.rect, *GameData::Colors().Get(active ? "drag select" : "dark"));
+			const double labelWidth = font.Width(key.label);
+			font.Draw(key.label, key.rect.Center() - Point(labelWidth / 2., 9.),
+				*GameData::Colors().Get("medium"));
+		}
 	}
 }
-#endif
 
 namespace {
 	constexpr size_t INVALID_POS = -1;
@@ -141,6 +192,10 @@ void Edit::Draw()
 {
 	if(!visible)
 		return;
+#ifdef __ANDROID__
+	if(HasFocus() && vkVisible)
+		DrawVirtualKeyboard();
+#endif
 
 #ifdef __ANDROID__
 	// ESMP: manual soft-keyboard button, shown while the field is focused.
@@ -375,15 +430,21 @@ bool Edit::Click(int x, int y, MouseButton button, int clicks)
 	if(button != MouseButton::LEFT)
 		return false;
 #ifdef __ANDROID__
-	if(HasFocus() && KbButtonRect().Contains(Point(x, y)))
+	if(HasFocus())
 	{
-		ForceShowKeyboard();
-		return true;
+		if(HandleVirtualKeyboard(Point(x, y)))
+			return true;
+		if(KbButtonRect().Contains(Point(x, y)))
+		{
+			ToggleVirtualKeyboard();
+			return true;
+		}
 	}
 #endif
 	if(!position.Contains(Point(x, y)))
 	{
 		SetFocus(false);
+		vkVisible = false;
 		return false;
 	}
 
@@ -469,11 +530,14 @@ bool Edit::OnFocus(bool f)
 		UpdateCaret(textHistory.back().second);
 	}
 	else
+	{
 #ifdef ES_USE_SDL3
 		SDL_StopTextInput(SDL_GetKeyboardFocus());
 #else
 		SDL_StopTextInput();
+		vkVisible = false;
 #endif
+	}
 	return true;
 }
 
@@ -485,6 +549,60 @@ Rectangle Edit::KbButtonRect() const
 	// A small strip centered under the text field.
 	return Rectangle(Point(position.Left() + position.Width() / 2.,
 		position.Bottom() + 26.), Point(120., 44.));
+}
+
+bool Edit::VirtualKeyboardVisible()
+{
+	return vkVisible;
+}
+
+void Edit::ToggleVirtualKeyboard()
+{
+	vkVisible = !vkVisible;
+}
+
+bool Edit::HandleVirtualKeyboard(const Point &p)
+{
+	if(!vkVisible)
+		return false;
+	for(const VkKey &key : VkKeys())
+	{
+		if(!key.rect.Contains(p))
+			continue;
+		switch(key.kind)
+		{
+			case 0:
+			{
+				char c = key.ch;
+				if(vkShift && !vkDigits)
+				{
+					c = static_cast<char>(toupper(c));
+					vkShift = false;
+				}
+				TextInput(std::string(1, c));
+				break;
+			}
+			case 1:
+				vkShift = !vkShift;
+				break;
+			case 2:
+				KeyDown(SDLK_BACKSPACE, 0, Command(), true);
+				break;
+			case 3:
+				vkDigits = !vkDigits;
+				break;
+			case 4:
+				vkVisible = false;
+				break;
+			case 5:
+				TextInput(" ");
+				break;
+			default:
+				break;
+		}
+		return true;
+	}
+	return false;
 }
 #endif
 
