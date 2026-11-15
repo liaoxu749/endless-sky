@@ -9,6 +9,7 @@ TextInput, ConversationPanel via KeyDown.
 #include "Color.h"
 #include "Rectangle.h"
 #include "GameData.h"
+#include "Logger.h"
 #include "SDL.h"
 #include "Screen.h"
 #include "shader/FillShader.h"
@@ -161,22 +162,36 @@ void VirtualKeyboard::Hide()
 
 void VirtualKeyboard::Draw()
 {
-	const Font &font = FontSet::Get(16);
-	for(const VkKey &key : VkKeys())
+	try
 	{
-		if(key.kind == KIND_SPACER)
-			continue;
-		const bool active = (key.kind == KIND_SHIFT && vkShift)
-			|| (key.kind == KIND_PAGE && vkDigits);
-		FillShader::Fill(key.rect, *GameData::Colors().Get(active ? "drag select" : "dark"));
-		const double labelWidth = font.Width(key.label);
-		font.Draw(key.label, key.rect.Center() - Point(labelWidth / 2., 9.),
-			*GameData::Colors().Get("medium"));
+		const Font &font = FontSet::Get(14);
+		auto color = [](const char *name) -> const Color & {
+			const Color *found = GameData::Colors().Get(name);
+			static const Color fallback;
+			return found ? *found : fallback;
+		};
+		const vector<VkKey> keys = VkKeys();
+		for(const VkKey &key : keys)
+		{
+			if(key.kind == KIND_SPACER)
+				continue;
+			const bool active = (key.kind == KIND_SHIFT && vkShift)
+				|| (key.kind == KIND_PAGE && vkDigits);
+			FillShader::Fill(key.rect, color(active ? "drag select" : "dark"));
+			const double labelWidth = font.Width(key.label);
+			font.Draw(key.label, key.rect.Center() - Point(labelWidth / 2., 9.),
+				color("medium"));
+		}
+	}
+	catch(const std::exception &e)
+	{
+		Logger::Log(string("VK draw error: ") + e.what(), Logger::Level::ERROR);
 	}
 }
 
 bool VirtualKeyboard::Click(const Point &p)
 {
+	try {
 	for(const VkKey &key : VkKeys())
 	{
 		if(!key.rect.Contains(p))
@@ -216,6 +231,12 @@ bool VirtualKeyboard::Click(const Point &p)
 				break;
 		}
 		return true;
+	}
+	return false;
+	}
+	catch(const std::exception &e)
+	{
+		Logger::Log(string("VK click error: ") + e.what(), Logger::Level::ERROR);
 	}
 	return false;
 }
